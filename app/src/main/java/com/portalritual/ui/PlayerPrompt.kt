@@ -22,7 +22,7 @@ import com.portalritual.engine.ConstellationState
 fun PlayerPrompt(state: ConstellationState, modifier: Modifier = Modifier) {
     val (title, hint) = when (state.phase) {
         ConstellationPhase.IDLE -> "TAP TO BEGIN" to "Touch the screen to reveal the stars"
-        ConstellationPhase.CONSTELLATION_ACTIVE -> "LINK THE STARS" to "Drag between stars to form the constellation"
+        ConstellationPhase.CONSTELLATION_ACTIVE -> "CONNECT THE STARS" to "Drag from star to star in numbered order"
         ConstellationPhase.CONSTELLATION_COMPLETE -> "CONSTELLATION FORMED" to "The pattern awakens..."
         ConstellationPhase.TRACE_RUNE -> "TRACE THE RUNE" to "Draw the sigil with your finger"
         ConstellationPhase.RESULTS -> "RITUAL COMPLETE" to "Tap to begin again"

@@ -192,6 +192,7 @@ private fun ConstellationScreen(sensorRuntime: SensorRuntime) {
             stability = gameState.stability,
             streak = gameState.streak,
             lastEvent = gameState.lastEvent?.name,
+            currentStepIndex = gameState.currentStepIndex,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -264,8 +265,12 @@ private fun ConstellationScreen(sensorRuntime: SensorRuntime) {
 private fun patternName(pattern: com.portalritual.engine.ConstellationPattern): String {
     return when (pattern) {
         ConstellationPatterns.TRIANGLE -> "Triangle"
-        ConstellationPatterns.BIG_DIPPER -> "Big Dipper"
-        ConstellationPatterns.PENTAGRAM -> "Pentagram"
+        ConstellationPatterns.DIAMOND -> "Diamond"
+        ConstellationPatterns.HOUSE -> "House"
+        ConstellationPatterns.ZIGZAG -> "Zigzag"
+        ConstellationPatterns.CROWN -> "Crown"
+        ConstellationPatterns.LIGHTNING -> "Lightning"
+        ConstellationPatterns.SPIRAL -> "Spiral"
         else -> "Constellation"
     }
 }

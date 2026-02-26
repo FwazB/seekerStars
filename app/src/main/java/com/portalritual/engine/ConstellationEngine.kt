@@ -14,6 +14,7 @@ object ConstellationEngine {
             phase = ConstellationPhase.IDLE,
             pattern = pattern,
             completedConnections = emptySet(),
+            currentStepIndex = 0,
             timeRemaining = pattern.timeLimitSec,
             timeLimitSec = pattern.timeLimitSec,
             stability = INITIAL_STABILITY
@@ -98,6 +99,7 @@ object ConstellationEngine {
         var streak = state.streak
         var streakTimer = state.streakTimer
         var score = state.score
+        var stepIndex = state.currentStepIndex
 
         // 1. Drain countdown
         val newTimeRemaining = (state.timeRemaining - input.deltaTime).coerceAtLeast(0f)
@@ -119,58 +121,56 @@ object ConstellationEngine {
             }
         }
 
-        // 3. Process connection
+        // 3. Process connection (sequential validation)
         val conn = input.connectionMade?.normalized()
         var completedConnections = state.completedConnections
 
-        if (conn != null) {
-            val required = state.pattern.requiredConnections.map { it.normalized() }.toSet()
+        if (conn != null && stepIndex < state.pattern.stars.size - 1) {
+            val expectedFrom = state.pattern.stars[stepIndex].id
+            val expectedTo = state.pattern.stars[stepIndex + 1].id
+            val expected = Connection(expectedFrom, expectedTo).normalized()
 
-            when {
-                conn !in required -> {
-                    // Wrong connection — penalty
-                    stability = (stability - STABILITY_WRONG_PENALTY).coerceAtLeast(0f)
-                    event = if (stability <= 0f) {
-                        EngineEvent.STABILITY_COLLAPSE
-                    } else {
-                        EngineEvent.WRONG_CONNECTION
-                    }
+            if (conn == expected) {
+                // Correct — advance step, add to completed, score, stability boost
+                stepIndex += 1
+                completedConnections = completedConnections + conn
+                stability = (stability + STABILITY_CORRECT_BONUS).coerceAtMost(INITIAL_STABILITY)
 
-                    if (stability <= 0f) {
-                        return state.copy(
-                            phase = ConstellationPhase.COLLAPSED,
-                            stability = 0f,
-                            streak = streak,
-                            streakTimer = streakTimer,
-                            score = score,
-                            timeRemaining = newTimeRemaining,
-                            lastEvent = EngineEvent.STABILITY_COLLAPSE,
-                            frameCount = nextFrame
-                        )
-                    }
+                streak = if (streakTimer > 0f || streak > 0) streak + 1 else 1
+                score += POINTS_PER_CONNECTION * streak
+                streakTimer = STREAK_WINDOW_SEC
+                event = EngineEvent.CORRECT_CONNECTION
+            } else {
+                // Wrong order — stability penalty
+                stability = (stability - STABILITY_WRONG_PENALTY).coerceAtLeast(0f)
+                event = if (stability <= 0f) {
+                    EngineEvent.STABILITY_COLLAPSE
+                } else {
+                    EngineEvent.WRONG_CONNECTION
                 }
-                conn in completedConnections -> {
-                    // Duplicate — ignore, keep whatever event was set (streak broken)
-                }
-                else -> {
-                    // Valid new connection
-                    completedConnections = completedConnections + conn
-                    stability = (stability + STABILITY_CORRECT_BONUS).coerceAtMost(INITIAL_STABILITY)
 
-                    streak = if (streakTimer > 0f || streak > 0) streak + 1 else 1
-                    score += POINTS_PER_CONNECTION * streak
-                    streakTimer = STREAK_WINDOW_SEC
-                    event = EngineEvent.CORRECT_CONNECTION
+                if (stability <= 0f) {
+                    return state.copy(
+                        phase = ConstellationPhase.COLLAPSED,
+                        stability = 0f,
+                        currentStepIndex = stepIndex,
+                        streak = streak,
+                        streakTimer = streakTimer,
+                        score = score,
+                        timeRemaining = newTimeRemaining,
+                        lastEvent = EngineEvent.STABILITY_COLLAPSE,
+                        frameCount = nextFrame
+                    )
                 }
             }
         }
 
-        // 4. Check completion
-        val required = state.pattern.requiredConnections.map { it.normalized() }.toSet()
-        return if (completedConnections.size == required.size) {
+        // 4. Check completion (all sequential connections made)
+        return if (stepIndex >= state.pattern.stars.size - 1) {
             state.copy(
                 phase = ConstellationPhase.CONSTELLATION_COMPLETE,
                 completedConnections = completedConnections,
+                currentStepIndex = stepIndex,
                 completionTimer = 0f,
                 score = score,
                 streak = streak,
@@ -183,6 +183,7 @@ object ConstellationEngine {
         } else {
             state.copy(
                 completedConnections = completedConnections,
+                currentStepIndex = stepIndex,
                 score = score,
                 streak = streak,
                 streakTimer = streakTimer,

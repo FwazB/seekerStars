@@ -4,6 +4,7 @@ data class ConstellationState(
     val phase: ConstellationPhase,
     val pattern: ConstellationPattern,
     val completedConnections: Set<Connection>,
+    val currentStepIndex: Int = 0,
     val completionTimer: Float = 0f,
     val frameCount: Long = 0,
     // Streak + score

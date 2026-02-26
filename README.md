@@ -6,14 +6,25 @@ Built for the **Solana Seeker** (Dimensity 7300, Android 15) — no ARCore requi
 
 ## Gameplay
 
-1. **Tap to begin** — a constellation pattern appears over the live camera feed
-2. **Link the stars** — drag between glowing star points to form connections before time runs out
+1. **Tap to begin** — a numbered constellation pattern appears over the live camera feed
+2. **Connect the dots** — drag from star 1 to star 2, then 2 to 3, and so on in sequence. Each star shows its number
 3. **Build streaks** — chain connections within 2.5s for multiplier scoring (2x, 3x, 4x...)
-4. **Stay stable** — wrong connections drain stability. Five mistakes and the constellation collapses
-5. **Trace the rune** — complete all connections to unlock a rune-tracing challenge ($1 gesture recognition)
-6. **Score** — results screen with score breakdown, best streak, and sparkle effects
+4. **Stay stable** — out-of-order connections drain stability. Five mistakes and the constellation collapses
+5. **Beat the clock** — each pattern has a time limit. Stars fade as time runs out
+6. **Trace the rune** — complete all connections to unlock a rune-tracing challenge ($1 gesture recognition)
+7. **Score** — results screen with score count-up, best streak, and sparkle effects
 
-Three constellation patterns: **Triangle** (20s), **Big Dipper** (30s), **Pentagram** (25s).
+Seven patterns in ascending difficulty:
+
+| Pattern | Stars | Time | Shape |
+|---------|-------|------|-------|
+| Triangle | 3 | 15s | Classic triangle |
+| Diamond | 4 | 18s | Rhombus perimeter |
+| House | 5 | 20s | Roof peak + walls |
+| Zigzag | 5 | 22s | Alternating descent |
+| Crown | 6 | 25s | Three rising peaks |
+| Lightning | 6 | 25s | Jagged bolt |
+| Spiral | 7 | 30s | Expanding outward |
 
 ## Architecture
 
@@ -69,6 +80,18 @@ repo/
 ├── build.gradle.kts
 ├── settings.gradle.kts
 └── gradle/
+```
+
+## Tests
+
+52 unit tests covering engine logic, gesture recognition, and sensor smoothing:
+
+- **ConstellationEngineTest** (28) — phase transitions, sequential validation, streak multiplier, countdown, stability, collapse triggers
+- **DollarOneRecognizerTest** (15) — template matching, cross-discrimination, jitter tolerance, edge cases
+- **YawSmootherTest** (9) — EMA smoothing, dead zone, wraparound at ±180°
+
+```bash
+./gradlew test
 ```
 
 ## Target Device

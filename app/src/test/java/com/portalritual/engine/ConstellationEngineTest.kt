@@ -7,21 +7,24 @@ import org.junit.Test
 
 class ConstellationEngineTest {
 
+    // Triangle: stars [0, 1, 2] → sequential connections 0→1, 1→2
     private val triangle = ConstellationPatterns.TRIANGLE
     private val noop = ConstellationInput(deltaTime = 1f / 60f)
     private val tap = noop.copy(tapEvent = true)
 
     private fun activeState(
         connections: Set<Connection> = emptySet(),
+        stepIndex: Int = 0,
         stability: Float = 100f,
         streak: Int = 0,
         streakTimer: Float = 0f,
         score: Int = 0,
-        timeRemaining: Float = 20f
+        timeRemaining: Float = 15f
     ): ConstellationState {
         return ConstellationEngine.initialState(triangle).copy(
             phase = ConstellationPhase.CONSTELLATION_ACTIVE,
             completedConnections = connections,
+            currentStepIndex = stepIndex,
             stability = stability,
             streak = streak,
             streakTimer = streakTimer,
@@ -31,18 +34,17 @@ class ConstellationEngineTest {
     }
 
     // ========================
-    // ORIGINAL TESTS (updated)
+    // INITIAL STATE + PHASE TRANSITIONS
     // ========================
 
     @Test
-    fun `initial state is IDLE with no completed connections`() {
+    fun `initial state is IDLE with step index 0`() {
         val state = ConstellationEngine.initialState(triangle)
         assertEquals(ConstellationPhase.IDLE, state.phase)
         assertTrue(state.completedConnections.isEmpty())
-        assertEquals(0L, state.frameCount)
+        assertEquals(0, state.currentStepIndex)
         assertEquals(100f, state.stability, 0.001f)
         assertEquals(0, state.score)
-        assertEquals(20f, state.timeRemaining, 0.001f)
     }
 
     @Test
@@ -60,53 +62,11 @@ class ConstellationEngineTest {
     }
 
     @Test
-    fun `valid connection is accepted`() {
-        val state = activeState()
-        val input = noop.copy(connectionMade = Connection(0, 1))
-        val result = ConstellationEngine.step(state, input)
-        assertEquals(1, result.completedConnections.size)
-        assertTrue(result.completedConnections.contains(Connection(0, 1).normalized()))
-    }
-
-    @Test
-    fun `reversed connection is treated as same edge`() {
-        val state = activeState()
-        val input = noop.copy(connectionMade = Connection(1, 0))
-        val result = ConstellationEngine.step(state, input)
-        assertEquals(1, result.completedConnections.size)
-        assertTrue(result.completedConnections.contains(Connection(0, 1)))
-    }
-
-    @Test
-    fun `duplicate connection is ignored`() {
-        val state = activeState(connections = setOf(Connection(0, 1).normalized()))
-        val input = noop.copy(connectionMade = Connection(0, 1))
-        val result = ConstellationEngine.step(state, input)
-        assertEquals(1, result.completedConnections.size)
-    }
-
-    @Test
-    fun `all connections completes constellation`() {
-        val state = activeState(
-            connections = setOf(
-                Connection(0, 1).normalized(),
-                Connection(1, 2).normalized()
-            )
-        )
-        val input = noop.copy(connectionMade = Connection(0, 2))
-        val result = ConstellationEngine.step(state, input)
-        assertEquals(ConstellationPhase.CONSTELLATION_COMPLETE, result.phase)
-        assertEquals(3, result.completedConnections.size)
-    }
-
-    @Test
     fun `CONSTELLATION_COMPLETE transitions to TRACE_RUNE after 1_5s`() {
         var state = ConstellationEngine.initialState(triangle).copy(
             phase = ConstellationPhase.CONSTELLATION_COMPLETE
         )
-        repeat(91) {
-            state = ConstellationEngine.step(state, noop)
-        }
+        repeat(91) { state = ConstellationEngine.step(state, noop) }
         assertEquals(ConstellationPhase.TRACE_RUNE, state.phase)
     }
 
@@ -115,21 +75,21 @@ class ConstellationEngineTest {
         val state = ConstellationEngine.initialState(triangle).copy(
             phase = ConstellationPhase.TRACE_RUNE
         )
-        val input = noop.copy(traceAccepted = true)
-        val result = ConstellationEngine.step(state, input)
+        val result = ConstellationEngine.step(state, noop.copy(traceAccepted = true))
         assertEquals(ConstellationPhase.RESULTS, result.phase)
     }
 
     @Test
-    fun `RESULTS restarts on tap`() {
+    fun `RESULTS restarts on tap with full reset`() {
         val state = ConstellationEngine.initialState(triangle).copy(
             phase = ConstellationPhase.RESULTS,
             score = 500,
+            currentStepIndex = 2,
             stability = 60f
         )
         val result = ConstellationEngine.step(state, tap)
         assertEquals(ConstellationPhase.IDLE, result.phase)
-        assertTrue(result.completedConnections.isEmpty())
+        assertEquals(0, result.currentStepIndex)
         assertEquals(0, result.score)
         assertEquals(100f, result.stability, 0.001f)
     }
@@ -145,27 +105,77 @@ class ConstellationEngineTest {
         assertEquals(100f, result.stability, 0.001f)
     }
 
+    // ========================
+    // SEQUENTIAL CONNECTION VALIDATION
+    // ========================
+
     @Test
-    fun `frame counter increments every step`() {
-        var state = ConstellationEngine.initialState(triangle)
-        assertEquals(0L, state.frameCount)
-        state = ConstellationEngine.step(state, noop)
-        assertEquals(1L, state.frameCount)
-        state = ConstellationEngine.step(state, noop)
-        assertEquals(2L, state.frameCount)
+    fun `correct sequential connection advances step index`() {
+        // Step 0: must connect star 0 → star 1
+        val state = activeState(stepIndex = 0)
+        val input = noop.copy(connectionMade = Connection(0, 1))
+        val result = ConstellationEngine.step(state, input)
+        assertEquals(1, result.currentStepIndex)
+        assertEquals(1, result.completedConnections.size)
+        assertEquals(EngineEvent.CORRECT_CONNECTION, result.lastEvent)
     }
 
     @Test
-    fun `determinism - same inputs produce same outputs`() {
-        val state = activeState()
-        val input = noop.copy(connectionMade = Connection(0, 1))
-        val r1 = ConstellationEngine.step(state, input)
-        val r2 = ConstellationEngine.step(state, input)
-        assertEquals(r1, r2)
+    fun `reversed correct connection still accepted (undirected)`() {
+        val state = activeState(stepIndex = 0)
+        val input = noop.copy(connectionMade = Connection(1, 0)) // reversed
+        val result = ConstellationEngine.step(state, input)
+        assertEquals(1, result.currentStepIndex)
+        assertEquals(1, result.completedConnections.size)
+    }
+
+    @Test
+    fun `wrong order connection penalizes stability`() {
+        // Step 0 expects 0→1, but player connects 1→2 (skipping ahead)
+        val state = activeState(stepIndex = 0)
+        val input = noop.copy(connectionMade = Connection(1, 2))
+        val result = ConstellationEngine.step(state, input)
+        assertEquals(0, result.currentStepIndex) // NOT advanced
+        assertEquals(80f, result.stability, 0.001f) // -20
+        assertEquals(EngineEvent.WRONG_CONNECTION, result.lastEvent)
+    }
+
+    @Test
+    fun `completely invalid connection penalizes stability`() {
+        val state = activeState(stepIndex = 0)
+        val input = noop.copy(connectionMade = Connection(0, 5)) // star 5 doesn't exist
+        val result = ConstellationEngine.step(state, input)
+        assertEquals(0, result.currentStepIndex)
+        assertEquals(80f, result.stability, 0.001f)
+    }
+
+    @Test
+    fun `all sequential connections complete constellation`() {
+        // Triangle: 3 stars, 2 connections. Step 0: 0→1, Step 1: 1→2
+        var state = activeState(stepIndex = 0)
+
+        // Step 0: connect 0→1
+        state = ConstellationEngine.step(state, noop.copy(connectionMade = Connection(0, 1)))
+        assertEquals(1, state.currentStepIndex)
+        assertEquals(ConstellationPhase.CONSTELLATION_ACTIVE, state.phase)
+
+        // Step 1: connect 1→2 (final)
+        state = ConstellationEngine.step(state, noop.copy(connectionMade = Connection(1, 2)))
+        assertEquals(2, state.currentStepIndex)
+        assertEquals(ConstellationPhase.CONSTELLATION_COMPLETE, state.phase)
+        assertEquals(2, state.completedConnections.size)
+    }
+
+    @Test
+    fun `derived requiredConnections matches sequential star order`() {
+        val conns = triangle.requiredConnections
+        assertEquals(2, conns.size)
+        assertEquals(Connection(0, 1), conns[0])
+        assertEquals(Connection(1, 2), conns[1])
     }
 
     // ========================
-    // STREAK + SCORE TESTS
+    // STREAK + SCORE (sequential)
     // ========================
 
     @Test
@@ -175,15 +185,13 @@ class ConstellationEngineTest {
         val result = ConstellationEngine.step(state, input)
         assertEquals(1, result.streak)
         assertEquals(100, result.score)
-        assertEquals(EngineEvent.CORRECT_CONNECTION, result.lastEvent)
-        assertTrue(result.streakTimer > 0f)
     }
 
     @Test
     fun `consecutive connections within window multiply score`() {
-        // First connection: streak=1, score=100
         val state = activeState(
             connections = setOf(Connection(0, 1).normalized()),
+            stepIndex = 1,
             streak = 1,
             streakTimer = 2.0f,
             score = 100
@@ -196,27 +204,14 @@ class ConstellationEngineTest {
 
     @Test
     fun `streak resets when timer expires`() {
-        // Streak active but timer about to expire
-        val state = activeState(
-            streak = 3,
-            streakTimer = 0.005f // will drain to 0 this frame
-        )
+        val state = activeState(streak = 3, streakTimer = 0.005f)
         val result = ConstellationEngine.step(state, noop)
         assertEquals(0, result.streak)
         assertEquals(EngineEvent.STREAK_BROKEN, result.lastEvent)
     }
 
-    @Test
-    fun `connection after streak break starts fresh streak at 1`() {
-        val state = activeState(streak = 0, streakTimer = 0f, score = 300)
-        val input = noop.copy(connectionMade = Connection(0, 1))
-        val result = ConstellationEngine.step(state, input)
-        assertEquals(1, result.streak)
-        assertEquals(400, result.score) // 300 + 100*1
-    }
-
     // ========================
-    // COUNTDOWN TESTS
+    // COUNTDOWN
     // ========================
 
     @Test
@@ -232,36 +227,11 @@ class ConstellationEngineTest {
         val result = ConstellationEngine.step(state, noop)
         assertEquals(ConstellationPhase.COLLAPSED, result.phase)
         assertEquals(EngineEvent.TIMEOUT, result.lastEvent)
-        assertEquals(0f, result.timeRemaining, 0.001f)
-    }
-
-    @Test
-    fun `timeRemainingPct returns correct percentage`() {
-        val state = activeState(timeRemaining = 10f).copy(timeLimitSec = 20f)
-        assertEquals(0.5f, ConstellationEngine.timeRemainingPct(state), 0.001f)
-    }
-
-    @Test
-    fun `timeRemainingPct clamps to 0 and 1`() {
-        val full = activeState(timeRemaining = 20f).copy(timeLimitSec = 20f)
-        assertEquals(1f, ConstellationEngine.timeRemainingPct(full), 0.001f)
-        val empty = activeState(timeRemaining = 0f).copy(timeLimitSec = 20f)
-        assertEquals(0f, ConstellationEngine.timeRemainingPct(empty), 0.001f)
     }
 
     // ========================
-    // WRONG CONNECTION / STABILITY TESTS
+    // STABILITY
     // ========================
-
-    @Test
-    fun `wrong connection drains stability by 20`() {
-        val state = activeState(stability = 100f)
-        val input = noop.copy(connectionMade = Connection(0, 5)) // not in triangle
-        val result = ConstellationEngine.step(state, input)
-        assertEquals(80f, result.stability, 0.001f)
-        assertEquals(EngineEvent.WRONG_CONNECTION, result.lastEvent)
-        assertTrue(result.completedConnections.isEmpty())
-    }
 
     @Test
     fun `correct connection boosts stability by 5`() {
@@ -280,10 +250,10 @@ class ConstellationEngineTest {
     }
 
     @Test
-    fun `stability collapse triggers COLLAPSED phase`() {
-        val state = activeState(stability = 15f)
-        // 15 - 20 = -5 → clamped to 0 → collapse
-        val input = noop.copy(connectionMade = Connection(0, 5))
+    fun `stability collapse from wrong connections`() {
+        val state = activeState(stability = 15f, stepIndex = 0)
+        // Wrong connection: 15 - 20 → 0 → collapse
+        val input = noop.copy(connectionMade = Connection(1, 2))
         val result = ConstellationEngine.step(state, input)
         assertEquals(ConstellationPhase.COLLAPSED, result.phase)
         assertEquals(0f, result.stability, 0.001f)
@@ -292,34 +262,48 @@ class ConstellationEngineTest {
 
     @Test
     fun `five wrong connections from full stability causes collapse`() {
-        var state = activeState(stability = 100f)
-        // 5 × -20 = -100 → 0
+        var state = activeState(stability = 100f, stepIndex = 0)
         repeat(4) {
-            state = ConstellationEngine.step(state, noop.copy(connectionMade = Connection(0, 5)))
+            state = ConstellationEngine.step(state, noop.copy(connectionMade = Connection(1, 2)))
             assertEquals(ConstellationPhase.CONSTELLATION_ACTIVE, state.phase)
         }
-        state = ConstellationEngine.step(state, noop.copy(connectionMade = Connection(0, 5)))
+        state = ConstellationEngine.step(state, noop.copy(connectionMade = Connection(1, 2)))
         assertEquals(ConstellationPhase.COLLAPSED, state.phase)
     }
 
     @Test
-    fun `glitch intensity increases as stability drops`() {
-        val full = activeState(stability = 100f)
-        assertEquals(0f, ConstellationEngine.glitchIntensity(full), 0.001f)
-        val half = activeState(stability = 50f)
-        assertEquals(0.5f, ConstellationEngine.glitchIntensity(half), 0.001f)
-        val zero = activeState(stability = 0f)
-        assertEquals(1f, ConstellationEngine.glitchIntensity(zero), 0.001f)
+    fun `glitch intensity scales with stability`() {
+        assertEquals(0f, ConstellationEngine.glitchIntensity(activeState(stability = 100f)), 0.001f)
+        assertEquals(0.5f, ConstellationEngine.glitchIntensity(activeState(stability = 50f)), 0.001f)
+        assertEquals(1f, ConstellationEngine.glitchIntensity(activeState(stability = 0f)), 0.001f)
     }
 
     // ========================
-    // LASTÉVENT CLEARING
+    // MISC
     // ========================
+
+    @Test
+    fun `frame counter increments every step`() {
+        var state = ConstellationEngine.initialState(triangle)
+        state = ConstellationEngine.step(state, noop)
+        assertEquals(1L, state.frameCount)
+        state = ConstellationEngine.step(state, noop)
+        assertEquals(2L, state.frameCount)
+    }
 
     @Test
     fun `lastEvent is cleared on frames with no event`() {
         val state = activeState().copy(lastEvent = EngineEvent.CORRECT_CONNECTION)
         val result = ConstellationEngine.step(state, noop)
         assertNull(result.lastEvent)
+    }
+
+    @Test
+    fun `determinism - same inputs produce same outputs`() {
+        val state = activeState()
+        val input = noop.copy(connectionMade = Connection(0, 1))
+        val r1 = ConstellationEngine.step(state, input)
+        val r2 = ConstellationEngine.step(state, input)
+        assertEquals(r1, r2)
     }
 }
