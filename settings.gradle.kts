@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PortalRitual"
+rootProject.name = "EpochDefenders"
 include(":app")

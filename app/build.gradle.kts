@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.portalritual"
+    namespace = "com.epochdefenders"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,22 +12,29 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.portalritual"
+        applicationId = "com.epochdefenders"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SOLANA_RPC_URL", "\"https://api.devnet.solana.com\"")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "SOLANA_RPC_URL", "\"https://api.devnet.solana.com\"")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "SOLANA_RPC_URL", "\"https://api.mainnet-beta.solana.com\"")
         }
     }
     compileOptions {
@@ -36,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -48,10 +56,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.sceneview)
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
+    implementation(libs.mediapipe.vision)
+    implementation(libs.solana.mwa)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
