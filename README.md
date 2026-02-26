@@ -71,18 +71,6 @@ repo/
 └── gradle/
 ```
 
-## Tests
-
-52 unit tests covering engine logic, gesture recognition, and sensor smoothing:
-
-- **ConstellationEngineTest** (28) — phase transitions, streak multiplier, countdown, stability, collapse triggers, determinism
-- **DollarOneRecognizerTest** (15) — template matching, cross-discrimination, jitter tolerance, edge cases
-- **YawSmootherTest** (9) — EMA smoothing, dead zone, wraparound at ±180°
-
-```bash
-./gradlew test
-```
-
 ## Target Device
 
 **Solana Seeker** — Dimensity 7300, 8GB RAM, Android 15. The Seeker is not on Google's ARCore supported devices list, so this app uses pure sensor-based AR (gyroscope + accelerometer via `TYPE_ROTATION_VECTOR`) instead of ARCore plane detection.
