@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,16 +17,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -67,12 +63,9 @@ fun LeaderboardScreen(
     entries: List<LeaderboardEntry>,
     isLoading: Boolean,
     error: String?,
-    walletAddress: String?,
     playerScore: Int?,
     playerWave: Int?,
     isSubmitting: Boolean,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
     onSubmitScore: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit
@@ -85,30 +78,21 @@ fun LeaderboardScreen(
         // 1 ── Header bar ─────────────────────────────────────────────
         HeaderBar(onBack = onBack, onRefresh = onRefresh)
 
-        // 2 ── Wallet section ─────────────────────────────────────────
-        WalletSection(
-            walletAddress = walletAddress,
-            onConnect = onConnect,
-            onDisconnect = onDisconnect
-        )
-
-        // 3 ── Player score card ──────────────────────────────────────
+        // 2 ── Player score card ──────────────────────────────────────
         if (playerScore != null) {
             PlayerScoreCard(
                 score = playerScore,
                 wave = playerWave ?: 0,
-                isConnected = walletAddress != null,
                 isSubmitting = isSubmitting,
                 onSubmitScore = onSubmitScore
             )
         }
 
-        // 4 ── Leaderboard list ───────────────────────────────────────
+        // 3 ── Leaderboard list ───────────────────────────────────────
         LeaderboardList(
             entries = entries,
             isLoading = isLoading,
             error = error,
-            walletAddress = walletAddress,
             onRetry = onRefresh,
             modifier = Modifier.weight(1f)
         )
@@ -139,7 +123,7 @@ private fun HeaderBar(onBack: () -> Unit, onRefresh: () -> Unit) {
 
         // Title — center
         Text(
-            text = "LEADERBOARD",
+            text = "LOCAL HIGH SCORES",
             color = NeonCyan,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -171,74 +155,12 @@ private fun HeaderBar(onBack: () -> Unit, onRefresh: () -> Unit) {
     )
 }
 
-// ── Wallet Section ───────────────────────────────────────────────────────
-
-@Composable
-private fun WalletSection(
-    walletAddress: String?,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        if (walletAddress == null) {
-            // Not connected — show Connect button
-            OutlinedButton(
-                onClick = onConnect,
-                border = BorderStroke(1.dp, NeonCyan),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = CardBg,
-                    contentColor = NeonCyan
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "CONNECT WALLET",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-            }
-        } else {
-            // Connected — show truncated address + disconnect
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = truncateAddress(walletAddress),
-                    color = NeonCyan,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    text = "DISCONNECT",
-                    color = NeonRed.copy(alpha = 0.8f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier
-                        .clickable { onDisconnect() }
-                        .padding(4.dp)
-                )
-            }
-        }
-    }
-}
-
 // ── Player Score Card ────────────────────────────────────────────────────
 
 @Composable
 private fun PlayerScoreCard(
     score: Int,
     wave: Int,
-    isConnected: Boolean,
     isSubmitting: Boolean,
     onSubmitScore: () -> Unit
 ) {
@@ -275,35 +197,33 @@ private fun PlayerScoreCard(
             textAlign = TextAlign.Center
         )
 
-        if (isConnected) {
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-            if (isSubmitting) {
-                Text(
-                    text = "SUBMITTING...",
-                    color = NeonYellow,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.alpha(submitAlpha)
+        if (isSubmitting) {
+            Text(
+                text = "SAVING...",
+                color = NeonYellow,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                modifier = Modifier.alpha(submitAlpha)
+            )
+        } else {
+            OutlinedButton(
+                onClick = onSubmitScore,
+                border = BorderStroke(1.dp, NeonGreen),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = CardBg,
+                    contentColor = NeonGreen
                 )
-            } else {
-                OutlinedButton(
-                    onClick = onSubmitScore,
-                    border = BorderStroke(1.dp, NeonGreen),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = CardBg,
-                        contentColor = NeonGreen
-                    )
-                ) {
-                    Text(
-                        text = "SUBMIT SCORE",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-                }
+            ) {
+                Text(
+                    text = "SAVE SCORE",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
+                )
             }
         }
     }
@@ -318,7 +238,6 @@ private fun LeaderboardList(
     entries: List<LeaderboardEntry>,
     isLoading: Boolean,
     error: String?,
-    walletAddress: String?,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -415,9 +334,7 @@ private fun LeaderboardList(
                     ) {
                         val displayEntries = entries.take(20)
                         itemsIndexed(displayEntries) { _, entry ->
-                            val isPlayer = walletAddress != null &&
-                                entry.walletAddress.equals(walletAddress, ignoreCase = true)
-                            LeaderboardRow(entry = entry, isPlayer = isPlayer)
+                            LeaderboardRow(entry = entry)
                         }
 
                         // Bottom spacer so the last row isn't clipped
@@ -448,9 +365,9 @@ private fun LeaderboardHeaderRow() {
             letterSpacing = 1.sp,
             modifier = Modifier.width(48.dp)
         )
-        // Address
+        // Player
         Text(
-            text = "ADDRESS",
+            text = "PLAYER",
             color = NeonCyan.copy(alpha = 0.7f),
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -483,7 +400,7 @@ private fun LeaderboardHeaderRow() {
 // ── Leaderboard Row ──────────────────────────────────────────────────────
 
 @Composable
-private fun LeaderboardRow(entry: LeaderboardEntry, isPlayer: Boolean) {
+private fun LeaderboardRow(entry: LeaderboardEntry) {
     val rankColor = when (entry.rank) {
         1 -> GoldColor
         2 -> SilverColor
@@ -491,32 +408,10 @@ private fun LeaderboardRow(entry: LeaderboardEntry, isPlayer: Boolean) {
         else -> Color.White.copy(alpha = 0.8f)
     }
 
-    val rowBgColor = if (isPlayer) {
-        NeonGreen.copy(alpha = 0.1f)
-    } else {
-        Color.Transparent
-    }
-
-    val rowBorder = if (isPlayer) {
-        BorderStroke(1.dp, NeonGreen.copy(alpha = 0.4f))
-    } else {
-        null
-    }
-
-    val rowModifier = Modifier
-        .fillMaxWidth()
-        .let { mod ->
-            if (rowBorder != null) {
-                mod.border(rowBorder, RoundedCornerShape(6.dp))
-            } else {
-                mod
-            }
-        }
-        .background(rowBgColor, RoundedCornerShape(6.dp))
-        .padding(horizontal = 8.dp, vertical = 10.dp)
-
     Row(
-        modifier = rowModifier,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Rank
@@ -529,10 +424,10 @@ private fun LeaderboardRow(entry: LeaderboardEntry, isPlayer: Boolean) {
             modifier = Modifier.width(48.dp)
         )
 
-        // Address (truncated)
+        // Player name
         Text(
-            text = truncateAddress(entry.walletAddress),
-            color = if (isPlayer) NeonGreen else Color.White.copy(alpha = 0.7f),
+            text = entry.walletAddress,
+            color = Color.White.copy(alpha = 0.7f),
             fontSize = 13.sp,
             letterSpacing = 0.5.sp,
             maxLines = 1,
@@ -543,7 +438,7 @@ private fun LeaderboardRow(entry: LeaderboardEntry, isPlayer: Boolean) {
         // Score
         Text(
             text = formatScore(entry.score),
-            color = if (isPlayer) NeonGreen else Color.White,
+            color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.End,
@@ -553,7 +448,7 @@ private fun LeaderboardRow(entry: LeaderboardEntry, isPlayer: Boolean) {
         // Wave
         Text(
             text = "${entry.waveReached}",
-            color = if (isPlayer) NeonGreen else NeonCyan.copy(alpha = 0.7f),
+            color = NeonCyan.copy(alpha = 0.7f),
             fontSize = 13.sp,
             textAlign = TextAlign.End,
             modifier = Modifier.width(56.dp)
@@ -595,7 +490,7 @@ private fun SkeletonRow() {
                 )
         )
         Spacer(modifier = Modifier.width(16.dp))
-        // Address placeholder
+        // Player placeholder
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -631,18 +526,6 @@ private fun SkeletonRow() {
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────
-
-/**
- * Truncates a Solana wallet address to show the first 4 and last 4 characters.
- * Example: "7nYB...xK9m"
- */
-private fun truncateAddress(address: String): String {
-    return if (address.length > 10) {
-        "${address.take(4)}...${address.takeLast(4)}"
-    } else {
-        address
-    }
-}
 
 /**
  * Formats a score integer with comma separators for readability.

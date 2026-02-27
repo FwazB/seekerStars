@@ -3,25 +3,4 @@
     <!-- Disable cleartext (HTTP) traffic globally -->
     <base-config cleartextTrafficPermitted="false" />
 
-    <!-- Solana RPC: devnet -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">api.devnet.solana.com</domain>
-        <pin-set expiration="2027-01-01">
-            <!-- Leaf cert pin (extracted 2026-02-26) -->
-            <pin digest="SHA-256">v5Qyzwv1uiWVpejy3QwSiFsFcx+HNrSqEFSNMNMSmNg=</pin>
-            <!-- Intermediate CA pin (backup — survives leaf rotation) -->
-            <pin digest="SHA-256">3fLLVjRIWnCqDqIETU2OcnMP7EzmN/Z3Q/jQ8cIaAoc=</pin>
-        </pin-set>
-    </domain-config>
-
-    <!-- Solana RPC: mainnet-beta -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">api.mainnet-beta.solana.com</domain>
-        <pin-set expiration="2027-01-01">
-            <!-- Leaf cert pin (extracted 2026-02-26) -->
-            <pin digest="SHA-256">drLiIXYGbMdlAQ63OT3+Vc2mWNJEftI14d/BBQjIDo8=</pin>
-            <!-- Intermediate CA pin (backup — survives leaf rotation) -->
-            <pin digest="SHA-256">3fLLVjRIWnCqDqIETU2OcnMP7EzmN/Z3Q/jQ8cIaAoc=</pin>
-        </pin-set>
-    </domain-config>
 </network-security-config>

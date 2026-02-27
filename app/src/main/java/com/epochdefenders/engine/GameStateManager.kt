@@ -43,8 +43,6 @@ data class TDGameState(
     val isBossWave: Boolean = false,
     val bossesDefeated: Int = 0,
     val leaksThisWave: Int = 0,
-    val triggeredBossThresholds: Set<Float> = emptySet(),
-    val currentBossThreshold: Float? = null,
     val towerRangeModifier: Float = 1f,
     val recentKillTimes: List<Float> = emptyList(),
     val lastComboTier: Int = 0,
@@ -191,49 +189,6 @@ object GameStateManager {
         return startNextWave(state.copy(gold = state.gold + bonus))
     }
 
-    // ── Epoch Boss Trigger ──────────────────────────────────────────
-
-    private val BOSS_THRESHOLDS = listOf(0.25f, 0.50f, 0.75f, 0.99f)
-    private const val BOSS_THRESHOLD_TOLERANCE = 0.01f
-
-    /**
-     * Check if epoch progress crosses a new boss threshold.
-     * Each threshold fires only once per game (tracked in triggeredBossThresholds).
-     * Call from the integration layer after polling EpochService.
-     */
-    fun checkEpochBoss(state: TDGameState, epochProgress: Float): TDGameState {
-        if (state.isGameOver) return state
-        if (state.phase == TDPhase.SPAWNING) return state // don't interrupt active spawning
-
-        val newThreshold = BOSS_THRESHOLDS.firstOrNull { threshold ->
-            threshold !in state.triggeredBossThresholds &&
-            epochProgress >= threshold &&
-            epochProgress < threshold + BOSS_THRESHOLD_TOLERANCE
-        } ?: return state
-
-        // Mark threshold as triggered and start boss wave
-        val updated = state.copy(
-            triggeredBossThresholds = state.triggeredBossThresholds + newThreshold,
-            currentBossThreshold = newThreshold
-        )
-        return startNextWave(updated, forceBoss = true)
-    }
-
-    // ── Boss Abilities ─────────────────────────────────────────────
-
-    private fun bossAbilitiesForThreshold(threshold: Float): Set<BossAbility> = when {
-        threshold >= 0.99f -> setOf(
-            BossAbility.SHIELD_PULSE,
-            BossAbility.RALLY_CRY,
-            BossAbility.DISRUPTION_FIELD,
-            BossAbility.SLOW_IMMUNE
-        )
-        threshold >= 0.75f -> setOf(BossAbility.DISRUPTION_FIELD)
-        threshold >= 0.50f -> setOf(BossAbility.RALLY_CRY)
-        threshold >= 0.25f -> setOf(BossAbility.SHIELD_PULSE)
-        else -> emptySet()
-    }
-
     // ── Main Update Loop ─────────────────────────────────────────────
 
     fun update(state: TDGameState, dtSec: Float): TDGameState {
@@ -307,7 +262,7 @@ object GameStateManager {
         }
         val speedMult = WaveSpawner.speedMultiplier(state.waveNumber)
 
-        var enemy = Enemy.spawn(
+        val enemy = Enemy.spawn(
             id = state.nextEntityId,
             type = type,
             startX = start.x,
@@ -316,39 +271,11 @@ object GameStateManager {
             speedMultiplier = speedMult
         )
 
-        // Assign boss abilities based on epoch threshold
-        var existingEnemies = state.enemies
-        if (type == EnemyType.BOSS && state.currentBossThreshold != null) {
-            val abilities = bossAbilitiesForThreshold(state.currentBossThreshold)
-            val shieldMax = if (BossAbility.SHIELD_PULSE in abilities)
-                enemy.maxHealth * GameConstants.SHIELD_PULSE_PERCENT else 0f
-            enemy = enemy.copy(
-                bossAbilities = abilities,
-                shield = shieldMax,
-                shieldMax = shieldMax,
-                shieldCooldown = if (shieldMax > 0f) GameConstants.SHIELD_PULSE_COOLDOWN_SEC else 0f,
-                immuneToSlow = BossAbility.SLOW_IMMUNE in abilities
-            )
-            // Rally Cry: boost all active enemies on the field
-            if (BossAbility.RALLY_CRY in abilities) {
-                existingEnemies = existingEnemies.map { e ->
-                    if (e.active) Enemy.applyRallyCry(e) else e
-                }
-            }
-        }
-
-        // Set tower range modifier when disruption boss spawns
-        val rangeMod = if (type == EnemyType.BOSS &&
-            state.currentBossThreshold != null &&
-            BossAbility.DISRUPTION_FIELD in (enemy.bossAbilities)
-        ) 1f - GameConstants.DISRUPTION_RANGE_REDUCTION else state.towerRangeModifier
-
         return state.copy(
-            enemies = existingEnemies + enemy,
+            enemies = state.enemies + enemy,
             spawnQueue = state.spawnQueue.drop(1),
             spawnTimer = GameConstants.SPAWN_INTERVAL_SEC,
-            nextEntityId = state.nextEntityId + 1,
-            towerRangeModifier = rangeMod
+            nextEntityId = state.nextEntityId + 1
         )
     }
 

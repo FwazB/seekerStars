@@ -20,12 +20,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "SOLANA_RPC_URL", "\"https://api.devnet.solana.com\"")
     }
 
     buildTypes {
         debug {
-            buildConfigField("String", "SOLANA_RPC_URL", "\"https://api.devnet.solana.com\"")
         }
         release {
             isMinifyEnabled = true
@@ -34,7 +32,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "SOLANA_RPC_URL", "\"https://api.mainnet-beta.solana.com\"")
         }
     }
     compileOptions {
@@ -59,7 +56,7 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
-    implementation(libs.solana.mwa)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

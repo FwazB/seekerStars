@@ -16,9 +16,6 @@
 # ── Android components (explicit for safety, AAPT also generates) ─────
 -keep class com.epochdefenders.MainActivity { *; }
 
-# ── Solana MWA (clientlib uses reflection for wallet adapter protocol) ──
--keep class com.solana.mobilewalletadapter.** { *; }
--keep class com.solanamobile.** { *; }
 
 # ── Strip Log calls in release (R8 optimization) ─────────────────────
 -assumenosideeffects class android.util.Log {

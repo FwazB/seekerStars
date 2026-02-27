@@ -1,21 +1,15 @@
 package com.epochdefenders.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,11 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,7 +46,6 @@ private val NeonCyan = Color(0xFF00FFFF)
 private val NeonYellow = Color(0xFFFFFF00)
 private val NeonRed = Color(0xFFFF0044)
 private val NeonGreen = Color(0xFF00FF44)
-private val EpochPurple = Color(0xFF9945FF)
 private val HudBg = Color(0xFF0A0A2A).copy(alpha = 0.95f)
 private val HudBorder = NeonCyan
 
@@ -70,9 +59,6 @@ fun TDHUD(
     lives: Int,
     wave: Int,
     score: Int,
-    epochNumber: Int,
-    epochProgress: Float,
-    bossTimeRemaining: String,
     isBossWave: Boolean,
     isGameOver: Boolean,
     onRestart: () -> Unit,
@@ -88,7 +74,7 @@ fun TDHUD(
 
         // ── Top bar ────────────────────────────────────────────────
 
-        TopBar(gold, lives, wave, score, epochNumber, epochProgress, bossTimeRemaining)
+        TopBar(gold, lives, wave, score)
 
         // ── Send Wave / Wave Timer ─────────────────────────────────
 
@@ -108,7 +94,7 @@ fun TDHUD(
         // ── Boss announcement ──────────────────────────────────────
 
         if (isBossWave) {
-            BossAnnouncement(epochNumber)
+            BossAnnouncement()
         }
 
         // ── Game over ──────────────────────────────────────────────
@@ -206,10 +192,7 @@ private fun TopBar(
     gold: Int,
     lives: Int,
     wave: Int,
-    score: Int,
-    epochNumber: Int,
-    epochProgress: Float,
-    bossTimeRemaining: String
+    score: Int
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Background bar
@@ -220,41 +203,13 @@ private fun TopBar(
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Gold, Lives, Wave, Score
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StatItem("GOLD", "$gold", NeonYellow)
-                    StatItem("LIVES", "$lives", NeonRed)
-                    StatItem("WAVE", "$wave", NeonGreen)
-                    StatItem("SCORE", "$score", Color.White)
-                }
-
-                // Right: Epoch
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "EPOCH",
-                        color = NeonCyan,
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = "#$epochNumber (${(epochProgress * 100).toInt()}%)",
-                        color = EpochPurple,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Boss: $bossTimeRemaining",
-                        color = EpochPurple.copy(alpha = 0.7f),
-                        fontSize = 10.sp
-                    )
-                }
+                StatItem("GOLD", "$gold", NeonYellow)
+                StatItem("LIVES", "$lives", NeonRed)
+                StatItem("WAVE", "$wave", NeonGreen)
+                StatItem("SCORE", "$score", Color.White)
             }
         }
 
@@ -338,7 +293,7 @@ private fun WaveAnnouncement(wave: Int) {
 // ── Boss Announcement ──────────────────────────────────────────────────
 
 @Composable
-private fun BossAnnouncement(epochNumber: Int) {
+private fun BossAnnouncement() {
     var showBoss by remember { mutableStateOf(true) }
     var overlayAlpha by remember { mutableFloatStateOf(0f) }
     var textAlpha by remember { mutableFloatStateOf(0f) }
@@ -380,13 +335,6 @@ private fun BossAnnouncement(epochNumber: Int) {
                     fontSize = 56.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 4.sp,
-                    modifier = Modifier.alpha(textAlpha)
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Epoch #$epochNumber",
-                    color = EpochPurple,
-                    fontSize = 24.sp,
                     modifier = Modifier.alpha(textAlpha)
                 )
             }

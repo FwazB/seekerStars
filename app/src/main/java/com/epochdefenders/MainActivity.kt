@@ -22,8 +22,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
-import kotlinx.coroutines.delay
 
 import com.epochdefenders.ar.CameraPreview
 import com.epochdefenders.ar.SensorRuntime
@@ -38,13 +36,9 @@ import com.epochdefenders.engine.TowerData
 import com.epochdefenders.engine.TowerType
 import com.epochdefenders.engine.Upgrade
 import com.epochdefenders.input.TowerPlacementOverlay
-import com.epochdefenders.solana.EpochInfo
-import com.epochdefenders.solana.EpochService
 import com.epochdefenders.solana.LeaderboardService
-import com.epochdefenders.solana.WalletManager
 import com.epochdefenders.ui.*
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
@@ -64,36 +58,17 @@ private fun EpochDefendersApp() {
 
     var gameState by remember { mutableStateOf(GameStateManager.newGame()) }
     var selectedTower by remember { mutableStateOf<TowerType?>(null) }
-    var epochInfo by remember { mutableStateOf<EpochInfo?>(null) }
     var effects by remember { mutableStateOf(listOf<TimedEffect>()) }
     var parallax by remember { mutableStateOf(Offset.Zero) }
-    val epochService = remember { EpochService.getInstance() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val sensorRuntime = remember { SensorRuntime(context) }
     val scope = rememberCoroutineScope()
 
-    // Leaderboard + Wallet state
+    // Leaderboard state
     var showLeaderboard by remember { mutableStateOf(false) }
     var lastFinalScore by remember { mutableStateOf<FinalScore?>(null) }
-    val activity = context as? androidx.activity.ComponentActivity
-    val walletManager = remember(activity) { activity?.let { WalletManager(it) } }
     val leaderboardService = remember { LeaderboardService.getInstance() }
-    val walletAddressFlow = remember(walletManager) {
-        walletManager?.walletAddress ?: kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    }
-    val walletAddress by walletAddressFlow.collectAsState()
-    val walletErrorFlow = remember(walletManager) {
-        walletManager?.walletError ?: kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
-    }
-    val walletError by walletErrorFlow.collectAsState()
-
-    // Show wallet errors as Toast
-    LaunchedEffect(walletError) {
-        walletError?.let { msg ->
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-        }
-    }
 
     var leaderboardEntries by remember { mutableStateOf(listOf<com.epochdefenders.solana.LeaderboardEntry>()) }
     var leaderboardLoading by remember { mutableStateOf(false) }
@@ -119,11 +94,6 @@ private fun EpochDefendersApp() {
                 parallax = Offset(dx, dy)
 
                 if (!gameState.isGameOver) {
-                    // Epoch boss check (fire-once per threshold)
-                    epochInfo?.let { info ->
-                        val progress = epochService.getEpochProgress(info)
-                        gameState = GameStateManager.checkEpochBoss(gameState, progress)
-                    }
                     val updated = GameStateManager.update(gameState, dt)
                     effects = processEvents(updated.events, effects)
                     // Capture FinalScore from GameOver event
@@ -134,14 +104,6 @@ private fun EpochDefendersApp() {
                 }
                 effects = tickEffects(effects, dt)
             }
-        }
-    }
-
-    // Epoch polling every 30s
-    LaunchedEffect(Unit) {
-        while (true) {
-            epochInfo = epochService.getEpochInfo()
-            delay(30_000L)
         }
     }
 
@@ -183,30 +145,17 @@ private fun EpochDefendersApp() {
         }
     }
 
-    val epochNum = (epochInfo?.epoch ?: 0L).toInt()
-    val epochProg = epochInfo?.let { epochService.getEpochProgress(it) } ?: 0f
-    val bossTime = epochInfo?.let {
-        epochService.formatTimeRemaining(epochService.getTimeUntilNextEpoch(it))
-    } ?: "--"
-
     if (showLeaderboard) {
         LeaderboardScreen(
             entries = leaderboardEntries,
             isLoading = leaderboardLoading,
             error = leaderboardError,
-            walletAddress = walletAddress,
             playerScore = lastFinalScore?.score,
             playerWave = lastFinalScore?.waveReached,
             isSubmitting = isSubmitting,
-            onConnect = {
-                walletManager?.let { wm ->
-                    scope.launch { wm.connect() }
-                }
-            },
-            onDisconnect = { walletManager?.disconnect() },
             onSubmitScore = {
                 val fs = lastFinalScore ?: return@LeaderboardScreen
-                val playerName = walletAddress ?: "Player"
+                val playerName = "Player"
                 scope.launch {
                     isSubmitting = true
                     leaderboardService.saveScore(context, playerName, fs.score, fs.waveReached)
@@ -274,7 +223,7 @@ private fun EpochDefendersApp() {
 
             TDHUD(
                 gameState.gold, gameState.lives, gameState.waveNumber, gameState.score,
-                epochNum, epochProg, bossTime, gameState.isBossWave, gameState.isGameOver,
+                gameState.isBossWave, gameState.isGameOver,
                 onRestart = {
                     gameState = GameStateManager.newGame()
                     selectedTower = null
