@@ -177,7 +177,10 @@ class GameStateManagerTest {
     @Test
     fun `spawning transitions to ACTIVE when queue empty`() {
         val state = GameStateManager.startNextWave(GameStateManager.newGame())
-            .copy(spawnQueue = emptyList())
+            .copy(
+                spawnQueue = emptyList(),
+                enemies = listOf(Enemy.spawn(99, EnemyType.GRUNT, 50f, 50f))
+            )
         val updated = GameStateManager.update(state, 0.01f)
         assertEquals(TDPhase.ACTIVE, updated.phase)
     }
@@ -188,11 +191,11 @@ class GameStateManagerTest {
         // First enemy spawns immediately
         val s1 = GameStateManager.update(state, 0.01f)
         assertEquals(1, s1.enemies.size)
-        // 0.5s later: still only 1 enemy (interval is 1.0s)
+        // 0.5s later: still only 1 enemy (interval is 1.5s)
         val s2 = GameStateManager.update(s1, 0.5f)
         assertEquals(1, s2.enemies.size)
-        // 0.6s later (total 1.1s): second enemy spawns
-        val s3 = GameStateManager.update(s2, 0.6f)
+        // 1.1s later (total 1.6s): second enemy spawns
+        val s3 = GameStateManager.update(s2, 1.1f)
         assertEquals(2, s3.enemies.size)
     }
 
@@ -212,13 +215,13 @@ class GameStateManagerTest {
 
     @Test
     fun `tower creates projectile when enemy in range`() {
-        // Place a tower, spawn an enemy nearby
+        // Place a tower, spawn an enemy further away so projectile survives the frame
         var state = GameStateManager.newGame().copy(
             towers = listOf(
-                Tower.place(1, TowerType.PULSE, 1, 2) // near path row 2
+                Tower.place(1, TowerType.PULSE, 1, 2) // at (96, 160)
             ),
             enemies = listOf(
-                Enemy.spawn(2, EnemyType.GRUNT, 100f, 160f) // on path
+                Enemy.spawn(2, EnemyType.GRUNT, 200f, 160f) // 104px away, within range 140
             ),
             phase = TDPhase.ACTIVE,
             waveNumber = 1,
@@ -239,11 +242,12 @@ class GameStateManagerTest {
                 EnemyData(
                     id = 1, type = EnemyType.GRUNT,
                     health = 0f, maxHealth = 25f,
-                    speed = 80f, baseSpeed = 80f,
+                    speed = 65f, baseSpeed = 65f,
                     x = 100f, y = 160f,
                     active = false, reachedEnd = false
                 )
             ),
+            spawnQueue = listOf(EnemyType.GRUNT), // prevent wave completion
             phase = TDPhase.ACTIVE,
             waveNumber = 1
         )
@@ -263,7 +267,7 @@ class GameStateManagerTest {
                 EnemyData(
                     id = 1, type = EnemyType.GRUNT,
                     health = 25f, maxHealth = 25f,
-                    speed = 80f, baseSpeed = 80f,
+                    speed = 65f, baseSpeed = 65f,
                     x = 800f, y = 352f,
                     active = false, reachedEnd = true
                 )
@@ -346,7 +350,7 @@ class GameStateManagerTest {
                 EnemyData(
                     id = 1, type = EnemyType.GRUNT,
                     health = 25f, maxHealth = 25f,
-                    speed = 80f, baseSpeed = 80f,
+                    speed = 65f, baseSpeed = 65f,
                     x = 800f, y = 352f,
                     active = false, reachedEnd = true
                 )

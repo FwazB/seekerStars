@@ -14,13 +14,13 @@ class WaveSpawnerTest {
     // ========================
 
     @Test
-    fun `wave 1 size is 9`() {
-        assertEquals(9, WaveSpawner.waveSize(1)) // 8 + 1
+    fun `wave 1 size is 4`() {
+        assertEquals(4, WaveSpawner.waveSize(1)) // 3 + 1
     }
 
     @Test
-    fun `wave 10 size is 18`() {
-        assertEquals(18, WaveSpawner.waveSize(10)) // 8 + 10
+    fun `wave 10 size is 13`() {
+        assertEquals(13, WaveSpawner.waveSize(10)) // 3 + 10
     }
 
     @Test
@@ -40,7 +40,7 @@ class WaveSpawnerTest {
     @Test
     fun `wave 1 — all grunts`() {
         val wave = WaveSpawner.generateWave(1)
-        assertEquals(9, wave.size)
+        assertEquals(4, wave.size)
         assertEquals(0, wave.countOf(EnemyType.RUNNER))
         assertEquals(0, wave.countOf(EnemyType.TANK))
     }
@@ -48,7 +48,7 @@ class WaveSpawnerTest {
     @Test
     fun `wave 3 — introduces runners`() {
         val wave = WaveSpawner.generateWave(3)
-        assertEquals(11, wave.size)
+        assertEquals(6, wave.size)
         assertTrue(wave.countOf(EnemyType.RUNNER) > 0)
         assertEquals(0, wave.countOf(EnemyType.TANK))
     }
@@ -147,12 +147,12 @@ class WaveSpawnerTest {
     // ========================
 
     @Test
-    fun `wave 1 bonus is 18`() {
-        assertEquals(18, WaveSpawner.waveBonus(1))
+    fun `wave 1 bonus is 25`() {
+        assertEquals(25, WaveSpawner.waveBonus(1))
     }
 
     @Test
-    fun `wave 10 bonus is 45`() {
-        assertEquals(45, WaveSpawner.waveBonus(10))
+    fun `wave 10 bonus is 70`() {
+        assertEquals(70, WaveSpawner.waveBonus(10))
     }
 }

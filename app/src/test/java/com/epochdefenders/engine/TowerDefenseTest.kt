@@ -24,7 +24,7 @@ class TowerDefenseTest {
         val e = Enemy.spawn(1, EnemyType.GRUNT, 0f, 0f)
         assertEquals(25f, e.health, 0.001f)
         assertEquals(25f, e.maxHealth, 0.001f)
-        assertEquals(80f, e.speed, 0.001f)
+        assertEquals(65f, e.speed, 0.001f)
         assertTrue(e.active)
     }
 
@@ -33,15 +33,15 @@ class TowerDefenseTest {
         val e = Enemy.spawn(1, EnemyType.GRUNT, 0f, 0f, difficultyMultiplier = 2f)
         assertEquals(50f, e.health, 0.001f)
         assertEquals(50f, e.maxHealth, 0.001f)
-        assertEquals(80f, e.speed, 0.001f) // speed not scaled by difficulty
+        assertEquals(65f, e.speed, 0.001f) // speed not scaled by difficulty
     }
 
     @Test
     fun `enemy speed scales with speed multiplier`() {
         val e = Enemy.spawn(1, EnemyType.GRUNT, 0f, 0f, speedMultiplier = 1.5f)
         assertEquals(25f, e.health, 0.001f)
-        assertEquals(120f, e.speed, 0.001f) // 80 * 1.5
-        assertEquals(120f, e.baseSpeed, 0.001f)
+        assertEquals(97.5f, e.speed, 0.001f) // 65 * 1.5
+        assertEquals(97.5f, e.baseSpeed, 0.001f)
     }
 
     @Test
@@ -85,8 +85,8 @@ class TowerDefenseTest {
         // Start far from waypoint at index 1 (100, 0)
         val e = Enemy.spawn(1, EnemyType.GRUNT, 10f, 0f).copy(pathIndex = 1)
         val updated = Enemy.update(e, 0.5f, simplePath)
-        // Speed 80, dt 0.5s → move 40px toward (100, 0)
-        assertEquals(50f, updated.x, 1f) // 10 + 40
+        // Speed 65, dt 0.5s → move 32.5px toward (100, 0)
+        assertEquals(42.5f, updated.x, 1f) // 10 + 32.5
         assertEquals(0f, updated.y, 0.1f)
     }
 
@@ -146,8 +146,8 @@ class TowerDefenseTest {
         val e = Enemy.spawn(1, EnemyType.GRUNT, 0f, 0f)
         val slowed = Enemy.applySlow(e)
         assertTrue(slowed.slowed)
-        assertEquals(80f * 0.65f, slowed.speed, 0.001f) // 52
-        assertEquals(80f, slowed.baseSpeed, 0.001f)
+        assertEquals(65f * 0.65f, slowed.speed, 0.001f)
+        assertEquals(65f, slowed.baseSpeed, 0.001f)
     }
 
     @Test
@@ -173,7 +173,7 @@ class TowerDefenseTest {
         val e = Enemy.spawn(1, EnemyType.GRUNT, 0f, 0f).copy(immuneToSlow = true)
         val result = Enemy.applySlow(e)
         assertFalse(result.slowed)
-        assertEquals(80f, result.speed, 0.001f)
+        assertEquals(65f, result.speed, 0.001f)
     }
 
     // ========================
@@ -187,7 +187,7 @@ class TowerDefenseTest {
         assertEquals(GameConstants.RALLY_CRY_SPEED_BOOST, rallied.speedBoost, 0.001f)
         // After update, effective speed = baseSpeed * (1 + boost)
         val updated = Enemy.update(rallied, 0.016f, simplePath)
-        val expectedSpeed = 80f * (1f + GameConstants.RALLY_CRY_SPEED_BOOST)
+        val expectedSpeed = 65f * (1f + GameConstants.RALLY_CRY_SPEED_BOOST)
         assertEquals(expectedSpeed, updated.speed, 0.1f)
     }
 
@@ -247,10 +247,10 @@ class TowerDefenseTest {
     }
 
     @Test
-    fun `cryo fires once per second`() {
-        val tower = Tower.place(1, TowerType.CRYO, 3, 3) // 1 shot/sec → 1.0s interval
-        assertTrue(Tower.canFire(tower, 1.0f)) // 1.0 - 0.0 >= 1.0
-        assertFalse(Tower.canFire(tower.copy(lastFireTimeSec = 0.5f), 1.0f)) // 0.5 < 1.0
+    fun `cryo does not fire projectiles — uses aura instead`() {
+        val tower = Tower.place(1, TowerType.CRYO, 3, 3) // aura-based, fireRate = 0
+        assertFalse(Tower.canFire(tower, 1.0f))
+        assertFalse(Tower.canFire(tower, 100.0f))
     }
 
     @Test

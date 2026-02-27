@@ -16,3 +16,12 @@ local.properties
 *.jks
 *.keystore
 *.md
+
+# Signing & publishing secrets
+publisher-keypair.json
+*.pem
+*.p12
+*.pfx
+*.pepk
+.env*
+keystore.properties

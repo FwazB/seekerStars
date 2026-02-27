@@ -53,7 +53,7 @@ object WaveSpawner {
     }
 
     fun waveSize(waveNumber: Int): Int = when {
-        waveNumber <= 10 -> 8 + waveNumber
+        waveNumber <= 10 -> 3 + waveNumber
         waveNumber <= 25 -> 8 + waveNumber + floor(waveNumber / 5f).toInt()
         else -> 8 + waveNumber + floor(waveNumber / 3f).toInt()
     }
@@ -72,5 +72,5 @@ object WaveSpawner {
 
     /** Zero-leak wave bonus */
     fun waveBonus(waveNumber: Int): Int =
-        15 + waveNumber * 3
+        20 + waveNumber * 5
 }

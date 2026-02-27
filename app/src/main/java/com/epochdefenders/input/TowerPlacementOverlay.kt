@@ -303,8 +303,8 @@ fun TowerPlacementOverlay(
                     for (col in 0 until gridCols.coerceAtMost(buildableGrid[row].size)) {
                         val px = (GRID_OFFSET_X + col * gridSize) * sx
                         val py = (GRID_OFFSET_Y + row * gridSize) * sy
-                        val cellW = (gridSize - 2f) * sx
-                        val cellH = (gridSize - 2f) * sy
+                        val cellW = gridSize * sx
+                        val cellH = gridSize * sy
                         val isBuildable = buildableGrid[row][col]
                         val isPressed = pressedCell?.first == col && pressedCell?.second == row
 

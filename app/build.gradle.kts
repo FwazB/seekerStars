@@ -1,7 +1,25 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+// ── Release Signing ─────────────────────────────────────────────────────
+// Reads keystore credentials from local.properties (local dev) or
+// environment variables (CI). Fawaz will provide the actual keystore.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val releaseStoreFile: String = System.getenv("RELEASE_STORE_FILE")
+    ?: localProperties.getProperty("RELEASE_STORE_FILE", "release-keystore.jks")
+val releaseStorePassword: String = System.getenv("RELEASE_STORE_PASSWORD")
+    ?: localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
+val releaseKeyAlias: String = System.getenv("RELEASE_KEY_ALIAS")
+    ?: localProperties.getProperty("RELEASE_KEY_ALIAS", "epoch-defenders")
+val releaseKeyPassword: String = System.getenv("RELEASE_KEY_PASSWORD")
+    ?: localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
 
 android {
     namespace = "com.epochdefenders"
@@ -20,12 +38,25 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(releaseStoreFile)
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
     }
 
     buildTypes {
         debug {
         }
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

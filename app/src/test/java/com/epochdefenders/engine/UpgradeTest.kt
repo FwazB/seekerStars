@@ -84,19 +84,19 @@ class UpgradeTest {
 
     @Test
     fun `totalInvested base only`() {
-        assertEquals(75, Upgrade.totalInvested(TowerType.PULSE, UpgradeData()))
+        assertEquals(50, Upgrade.totalInvested(TowerType.PULSE, UpgradeData()))
     }
 
     @Test
     fun `totalInvested with upgrades`() {
         val u = UpgradeData(pathA = 2, pathB = 1) // Pulse: 50+100 + 40 = 190
-        assertEquals(75 + 190, Upgrade.totalInvested(TowerType.PULSE, u))
+        assertEquals(50 + 190, Upgrade.totalInvested(TowerType.PULSE, u))
     }
 
     @Test
     fun `totalInvested fully maxed pulse`() {
         val u = UpgradeData(pathA = 3, pathB = 2) // 50+100+200 + 40+80 = 470
-        assertEquals(75 + 470, Upgrade.totalInvested(TowerType.PULSE, u))
+        assertEquals(50 + 470, Upgrade.totalInvested(TowerType.PULSE, u))
     }
 
     // ========================
@@ -173,13 +173,13 @@ class UpgradeTest {
     }
 
     @Test
-    fun `cryo path B tier 1 gives 1 extra target`() {
-        assertEquals(1, Upgrade.extraTargets(TowerType.CRYO, UpgradeData(pathB = 1)))
+    fun `cryo path B tier 1 adds linger duration`() {
+        assertEquals(1.0f, Upgrade.effectiveLingerDuration(TowerType.CRYO, UpgradeData(pathB = 1)), 0.001f)
     }
 
     @Test
-    fun `cryo path B tier 3 gives 4 extra targets`() {
-        assertEquals(4, Upgrade.extraTargets(TowerType.CRYO, UpgradeData(pathB = 3)))
+    fun `cryo path B tier 3 adds max linger duration`() {
+        assertEquals(4.0f, Upgrade.effectiveLingerDuration(TowerType.CRYO, UpgradeData(pathB = 3)), 0.001f)
     }
 
     @Test
@@ -228,23 +228,13 @@ class UpgradeTest {
     }
 
     @Test
-    fun `upgraded cryo projectile has stronger slow multiplier`() {
-        val tower = Tower.place(1, TowerType.CRYO, 3, 3)
-            .copy(upgrades = UpgradeData(pathA = 2)) // 0.40 multiplier
-        val enemy = Enemy.spawn(1, EnemyType.GRUNT, tower.x + 50f, tower.y)
-        val result = Tower.update(tower, listOf(enemy), 1.0f)
-        assertNotNull(result.projectile)
-        assertEquals(0.40f, result.projectile!!.slowMultiplier, 0.001f)
+    fun `upgraded cryo has stronger slow multiplier`() {
+        assertEquals(0.40f, Upgrade.effectiveSlowMultiplier(TowerType.CRYO, UpgradeData(pathA = 2)), 0.001f)
     }
 
     @Test
-    fun `upgraded cryo projectile has extra targets`() {
-        val tower = Tower.place(1, TowerType.CRYO, 3, 3)
-            .copy(upgrades = UpgradeData(pathB = 2)) // +2 extra
-        val enemy = Enemy.spawn(1, EnemyType.GRUNT, tower.x + 50f, tower.y)
-        val result = Tower.update(tower, listOf(enemy), 1.0f)
-        assertNotNull(result.projectile)
-        assertEquals(2, result.projectile!!.extraSlowTargets)
+    fun `upgraded cryo has longer linger duration`() {
+        assertEquals(2.0f, Upgrade.effectiveLingerDuration(TowerType.CRYO, UpgradeData(pathB = 2)), 0.001f)
     }
 
     // ========================
@@ -264,7 +254,7 @@ class UpgradeTest {
     @Test
     fun `upgradeTower returns null when insufficient gold`() {
         val state = GameStateManager.newGame().copy(gold = 80)
-        val placed = GameStateManager.placeTower(state, TowerType.PULSE, 0, 0)!! // 75g → 5g left
+        val placed = GameStateManager.placeTower(state, TowerType.PULSE, 0, 0)!! // 50g → 30g left
         val result = GameStateManager.upgradeTower(placed, 0, 'A') // 50g needed
         assertNull(result)
     }
@@ -303,8 +293,8 @@ class UpgradeTest {
         val placed = GameStateManager.placeTower(state, TowerType.PULSE, 0, 0)!!
         val upgraded = GameStateManager.upgradeTower(placed, 0, 'A')!! // +50g invested
         val sold = GameStateManager.sellTower(upgraded, 0)!!
-        // Total invested: 75 (base) + 50 (upgrade) = 125. Refund: 125 * 0.7 = 87
-        val expectedRefund = (125 * GameConstants.SELL_REFUND_RATE).toInt()
+        // Total invested: 50 (base) + 50 (upgrade) = 100. Refund: 100 * 0.7 = 70
+        val expectedRefund = (100 * GameConstants.SELL_REFUND_RATE).toInt()
         assertEquals(upgraded.gold + expectedRefund, sold.gold)
     }
 
@@ -362,7 +352,7 @@ class UpgradeTest {
         val e = Enemy.spawn(1, EnemyType.GRUNT, 0f, 0f)
         val slowed = Enemy.applySlow(e, multiplier = 0.40f)
         assertEquals(0.40f, slowed.slowMultiplier, 0.001f)
-        assertEquals(80f * 0.40f, slowed.speed, 0.001f)
+        assertEquals(65f * 0.40f, slowed.speed, 0.001f)
     }
 
     // ========================
@@ -383,8 +373,10 @@ class UpgradeTest {
         val updated = GameStateManager.update(state, 0.01f)
         val waveBonus = WaveSpawner.waveBonus(1)
         val beaconIncome = Upgrade.effectiveIncome(TowerType.BEACON, UpgradeData())
+        val passiveIncome = GameConstants.PASSIVE_WAVE_INCOME_BASE +
+            (1 / GameConstants.PASSIVE_WAVE_INCOME_INTERVAL) * GameConstants.PASSIVE_WAVE_INCOME_STEP
         assertEquals(8, beaconIncome)
-        assertEquals(GameConstants.STARTING_GOLD + waveBonus + beaconIncome, updated.gold)
+        assertEquals(GameConstants.STARTING_GOLD + waveBonus + beaconIncome + passiveIncome, updated.gold)
     }
 
     @Test
@@ -401,7 +393,9 @@ class UpgradeTest {
         )
         val updated = GameStateManager.update(state, 0.01f)
         val waveBonus = WaveSpawner.waveBonus(1)
-        assertEquals(GameConstants.STARTING_GOLD + waveBonus + 24, updated.gold)
+        val passiveIncome = GameConstants.PASSIVE_WAVE_INCOME_BASE +
+            (1 / GameConstants.PASSIVE_WAVE_INCOME_INTERVAL) * GameConstants.PASSIVE_WAVE_INCOME_STEP
+        assertEquals(GameConstants.STARTING_GOLD + waveBonus + 24 + passiveIncome, updated.gold)
     }
 
     @Test
@@ -417,7 +411,9 @@ class UpgradeTest {
         )
         val updated = GameStateManager.update(state, 0.01f)
         val beaconIncome = Upgrade.effectiveIncome(TowerType.BEACON, UpgradeData())
-        assertEquals(GameConstants.STARTING_GOLD + beaconIncome, updated.gold)
+        val passiveIncome = GameConstants.PASSIVE_WAVE_INCOME_BASE +
+            (1 / GameConstants.PASSIVE_WAVE_INCOME_INTERVAL) * GameConstants.PASSIVE_WAVE_INCOME_STEP
+        assertEquals(GameConstants.STARTING_GOLD + beaconIncome + passiveIncome, updated.gold)
     }
 
     // ========================

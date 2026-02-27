@@ -7,11 +7,11 @@ object GameConstants {
     const val GAME_WIDTH = 800
     const val GAME_HEIGHT = 600
 
-    const val STARTING_GOLD = 150
-    const val STARTING_LIVES = 15
+    const val STARTING_GOLD = 250
+    const val STARTING_LIVES = 20
 
     const val WAVE_DELAY_SEC = 3.0f
-    const val SPAWN_INTERVAL_SEC = 1.0f
+    const val SPAWN_INTERVAL_SEC = 1.5f
 
     const val WAVE_AUTO_START_SEC = 30f
     const val EARLY_SEND_BONUS = 10
@@ -57,7 +57,7 @@ enum class EnemyType(
     val reward: Int,
     val size: Float
 ) {
-    GRUNT(25f, 80f, 8, 16f),
+    GRUNT(25f, 65f, 8, 16f),
     RUNNER(20f, 160f, 12, 12f),
     TANK(120f, 50f, 20, 24f),
     BOSS(800f, 35f, 250, 48f)
@@ -73,7 +73,7 @@ enum class TowerType(
     val isSlowing: Boolean = false,
     val displayName: String
 ) {
-    PULSE(75, 8f, 140f, 1f, 400f, displayName = "Pulse Tower"),
+    PULSE(50, 8f, 140f, 1f, 400f, displayName = "Pulse Tower"),
     NOVA_CANNON(125, 20f, 130f, 0.5f, 300f, isSplash = true, displayName = "Nova Cannon"),
     CRYO(60, 0f, 140f, 0f, 0f, isSlowing = true, displayName = "Cryo Tower"),
     RAILGUN(100, 30f, 200f, 0.25f, 500f, displayName = "Railgun"),
