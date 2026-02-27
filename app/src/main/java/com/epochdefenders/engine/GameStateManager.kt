@@ -544,7 +544,7 @@ object GameStateManager {
 
         // Kill combo tracking
         val killTimes = state.recentKillTimes
-            .filter { state.gameTimeSec - it < GameConstants.COMBO_WINDOW_SEC }
+            .filter { state.gameTimeSec - it < GameConstants.COMBO_10_WINDOW_SEC }
             .toMutableList()
         var comboTier = state.lastComboTier
         var lastKillX = 0f
@@ -585,29 +585,32 @@ object GameStateManager {
             }
         }
 
-        // Check combo thresholds (only award bonus when crossing a new tier)
-        val comboCount = killTimes.size
-        if (comboCount >= 10 && comboTier < 3) {
+        // Check combo thresholds — each tier counts only kills within its own window
+        val kills10 = killTimes.count { state.gameTimeSec - it < GameConstants.COMBO_10_WINDOW_SEC }
+        val kills5 = killTimes.count { state.gameTimeSec - it < GameConstants.COMBO_5_WINDOW_SEC }
+        val kills3 = killTimes.count { state.gameTimeSec - it < GameConstants.COMBO_3_WINDOW_SEC }
+
+        if (kills10 >= 10 && comboTier < 3) {
             val bonus = GameConstants.COMBO_10_BONUS
             gold += bonus
             goldEarned += bonus
             score += bonus * 10
             comboTier = 3
-            events.add(GameEvent.ComboBonus(lastKillX, lastKillY, bonus, comboCount))
-        } else if (comboCount >= 5 && comboTier < 2) {
+            events.add(GameEvent.ComboBonus(lastKillX, lastKillY, bonus, kills10))
+        } else if (kills5 >= 5 && comboTier < 2) {
             val bonus = GameConstants.COMBO_5_BONUS
             gold += bonus
             goldEarned += bonus
             score += bonus * 10
             comboTier = 2
-            events.add(GameEvent.ComboBonus(lastKillX, lastKillY, bonus, comboCount))
-        } else if (comboCount >= 3 && comboTier < 1) {
+            events.add(GameEvent.ComboBonus(lastKillX, lastKillY, bonus, kills5))
+        } else if (kills3 >= 3 && comboTier < 1) {
             val bonus = GameConstants.COMBO_3_BONUS
             gold += bonus
             goldEarned += bonus
             score += bonus * 10
             comboTier = 1
-            events.add(GameEvent.ComboBonus(lastKillX, lastKillY, bonus, comboCount))
+            events.add(GameEvent.ComboBonus(lastKillX, lastKillY, bonus, kills3))
         }
 
         return state.copy(

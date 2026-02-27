@@ -59,7 +59,6 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
-    implementation(libs.mediapipe.vision)
     implementation(libs.solana.mwa)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

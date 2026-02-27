@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import kotlinx.coroutines.delay
 
 import com.epochdefenders.ar.CameraPreview
@@ -82,6 +83,18 @@ private fun EpochDefendersApp() {
         walletManager?.walletAddress ?: kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     }
     val walletAddress by walletAddressFlow.collectAsState()
+    val walletErrorFlow = remember(walletManager) {
+        walletManager?.walletError ?: kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    }
+    val walletError by walletErrorFlow.collectAsState()
+
+    // Show wallet errors as Toast
+    LaunchedEffect(walletError) {
+        walletError?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
+
     var leaderboardEntries by remember { mutableStateOf(listOf<com.epochdefenders.solana.LeaderboardEntry>()) }
     var leaderboardLoading by remember { mutableStateOf(false) }
     var leaderboardError by remember { mutableStateOf<String?>(null) }
@@ -193,22 +206,15 @@ private fun EpochDefendersApp() {
             onDisconnect = { walletManager?.disconnect() },
             onSubmitScore = {
                 val fs = lastFinalScore ?: return@LeaderboardScreen
-                val wm = walletManager ?: return@LeaderboardScreen
+                val playerName = walletAddress ?: "Player"
                 scope.launch {
                     isSubmitting = true
-                    leaderboardService.submitScore(
-                        walletManager = wm,
-                        score = fs.score,
-                        waveReached = fs.waveReached,
-                        goldEarned = fs.goldEarned,
-                        towersPlaced = fs.towersPlaced,
-                        timeSurvivedSec = fs.timeSurvivedSec,
-                        bossesDefeated = fs.bossesDefeated
-                    )
+                    leaderboardService.saveScore(context, playerName, fs.score, fs.waveReached)
                     isSubmitting = false
+                    lastFinalScore = null // prevent duplicate submissions
                     // Refresh leaderboard after submission
                     leaderboardLoading = true
-                    leaderboardEntries = leaderboardService.getLeaderboard(forceRefresh = true)
+                    leaderboardEntries = leaderboardService.getLeaderboard(context)
                     leaderboardLoading = false
                 }
             },
@@ -217,7 +223,7 @@ private fun EpochDefendersApp() {
                     leaderboardLoading = true
                     leaderboardError = null
                     try {
-                        leaderboardEntries = leaderboardService.getLeaderboard(forceRefresh = true)
+                        leaderboardEntries = leaderboardService.getLeaderboard(context)
                     } catch (e: Exception) {
                         leaderboardError = e.message ?: "Failed to load"
                     }
@@ -280,7 +286,7 @@ private fun EpochDefendersApp() {
                     scope.launch {
                         leaderboardLoading = true
                         try {
-                            leaderboardEntries = leaderboardService.getLeaderboard()
+                            leaderboardEntries = leaderboardService.getLeaderboard(context)
                         } catch (e: Exception) {
                             leaderboardError = e.message ?: "Failed to load"
                         }

@@ -34,7 +34,9 @@ object GameConstants {
     const val PASSIVE_WAVE_INCOME_INTERVAL = 5
 
     // Kill combo
-    const val COMBO_WINDOW_SEC = 2f
+    const val COMBO_3_WINDOW_SEC = 2.0f   // 3-kill combo window
+    const val COMBO_5_WINDOW_SEC = 3.0f   // 5-kill combo window
+    const val COMBO_10_WINDOW_SEC = 5.0f  // 10-kill combo window
     const val COMBO_3_BONUS = 5
     const val COMBO_5_BONUS = 15
     const val COMBO_10_BONUS = 30

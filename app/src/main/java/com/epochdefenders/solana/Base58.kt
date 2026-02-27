@@ -14,20 +14,23 @@ object Base58 {
     fun encode(input: ByteArray): String {
         if (input.isEmpty()) return ""
 
+        // Work on a copy — divmod mutates the array in place
+        val number = input.copyOf()
+
         // Count leading zeros
         var leadingZeros = 0
-        while (leadingZeros < input.size && input[leadingZeros] == 0.toByte()) {
+        while (leadingZeros < number.size && number[leadingZeros] == 0.toByte()) {
             leadingZeros++
         }
 
         // Convert base-256 to base-58
-        val encoded = CharArray(input.size * 2) // upper bound
+        val encoded = CharArray(number.size * 2) // upper bound
         var outputStart = encoded.size
         var inputStart = leadingZeros
 
-        while (inputStart < input.size) {
-            val remainder = divmod(input, inputStart, 256, 58)
-            if (input[inputStart] == 0.toByte()) inputStart++
+        while (inputStart < number.size) {
+            val remainder = divmod(number, inputStart, 256, 58)
+            if (number[inputStart] == 0.toByte()) inputStart++
             encoded[--outputStart] = ALPHABET[remainder]
         }
 
