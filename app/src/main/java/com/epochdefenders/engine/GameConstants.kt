@@ -43,12 +43,6 @@ object GameConstants {
     const val SPEED_SCALE_PER_WAVE = 0.005f
     const val BOSS_HP_SCALE_BASE = 1.15f
 
-    // Boss abilities
-    const val SHIELD_PULSE_COOLDOWN_SEC = 8f
-    const val SHIELD_PULSE_PERCENT = 0.2f
-    const val RALLY_CRY_SPEED_BOOST = 0.25f
-    const val RALLY_CRY_DURATION_SEC = 5f
-    const val DISRUPTION_RANGE_REDUCTION = 0.15f
 }
 
 enum class EnemyType(
@@ -79,5 +73,3 @@ enum class TowerType(
     RAILGUN(100, 30f, 200f, 0.25f, 500f, displayName = "Railgun"),
     BEACON(125, 0f, 100f, 0f, 0f, displayName = "Beacon")
 }
-
-enum class BossAbility { SHIELD_PULSE, RALLY_CRY, DISRUPTION_FIELD, SLOW_IMMUNE }

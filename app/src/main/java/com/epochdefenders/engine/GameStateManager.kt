@@ -43,7 +43,6 @@ data class TDGameState(
     val isBossWave: Boolean = false,
     val bossesDefeated: Int = 0,
     val leaksThisWave: Int = 0,
-    val towerRangeModifier: Float = 1f,
     val recentKillTimes: List<Float> = emptyList(),
     val lastComboTier: Int = 0,
     val events: List<GameEvent> = emptyList()
@@ -293,7 +292,7 @@ object GameStateManager {
         var nextId = state.nextEntityId
 
         for (tower in towersWithAura) {
-            val result = Tower.update(tower, activeEnemies, state.gameTimeSec, state.towerRangeModifier)
+            val result = Tower.update(tower, activeEnemies, state.gameTimeSec)
             updatedTowers.add(result.tower)
 
             if (result.projectile != null) {
@@ -467,8 +466,6 @@ object GameStateManager {
         val events = state.events.toMutableList()
         val surviving = mutableListOf<EnemyData>()
 
-        var rangeMod = state.towerRangeModifier
-
         // Kill combo tracking
         val killTimes = state.recentKillTimes
             .filter { state.gameTimeSec - it < GameConstants.COMBO_10_WINDOW_SEC }
@@ -488,8 +485,6 @@ object GameStateManager {
                     goldEarned += enemy.type.reward
                     score += enemy.type.reward * 10
                     if (enemy.type == EnemyType.BOSS) bossesDefeated++
-                    // Reset disruption field when disruption boss dies
-                    if (BossAbility.DISRUPTION_FIELD in enemy.bossAbilities) rangeMod = 1f
                     events.add(GameEvent.EnemyKilled(enemy.x, enemy.y, enemy.type.reward))
 
                     // Track kill for combo
@@ -502,8 +497,6 @@ object GameStateManager {
                 enemy.reachedEnd -> {
                     lives--
                     leaks++
-                    // Reset disruption field when disruption boss leaves
-                    if (BossAbility.DISRUPTION_FIELD in enemy.bossAbilities) rangeMod = 1f
                     events.add(GameEvent.EnemyReachedEnd(enemy.x, enemy.y))
                 }
 
@@ -548,7 +541,6 @@ object GameStateManager {
             leaksThisWave = leaks,
             bossesDefeated = bossesDefeated,
             enemies = surviving,
-            towerRangeModifier = rangeMod,
             recentKillTimes = killTimes,
             lastComboTier = comboTier,
             events = events

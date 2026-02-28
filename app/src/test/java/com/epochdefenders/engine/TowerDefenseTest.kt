@@ -180,25 +180,6 @@ class TowerDefenseTest {
     // ENEMY — BOSS ABILITIES
     // ========================
 
-    @Test
-    fun `rally cry boosts speed`() {
-        val e = Enemy.spawn(1, EnemyType.GRUNT, 50f, 0f).copy(pathIndex = 1)
-        val rallied = Enemy.applyRallyCry(e)
-        assertEquals(GameConstants.RALLY_CRY_SPEED_BOOST, rallied.speedBoost, 0.001f)
-        // After update, effective speed = baseSpeed * (1 + boost)
-        val updated = Enemy.update(rallied, 0.016f, simplePath)
-        val expectedSpeed = 65f * (1f + GameConstants.RALLY_CRY_SPEED_BOOST)
-        assertEquals(expectedSpeed, updated.speed, 0.1f)
-    }
-
-    @Test
-    fun `rally cry expires after duration`() {
-        val e = Enemy.spawn(1, EnemyType.GRUNT, 50f, 0f).copy(pathIndex = 1)
-        val rallied = Enemy.applyRallyCry(e)
-        val updated = Enemy.update(rallied, GameConstants.RALLY_CRY_DURATION_SEC + 0.1f, simplePath)
-        assertEquals(0f, updated.speedBoost, 0.001f)
-    }
-
     // ========================
     // TOWER — TARGETING
     // ========================

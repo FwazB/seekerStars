@@ -17,14 +17,9 @@ data class EnemyData(
     val slowMultiplier: Float = GameConstants.CRYO_SLOW_MULTIPLIER,
     val active: Boolean = true,
     val reachedEnd: Boolean = false,
-    // Boss abilities
     val shield: Float = 0f,
     val shieldMax: Float = 0f,
-    val shieldCooldown: Float = 0f,
-    val immuneToSlow: Boolean = false,
-    val bossAbilities: Set<BossAbility> = emptySet(),
-    val speedBoost: Float = 0f,
-    val speedBoostTimer: Float = 0f
+    val immuneToSlow: Boolean = false
 )
 
 object Enemy {
@@ -54,29 +49,7 @@ object Enemy {
     fun update(enemy: EnemyData, dtSec: Float, path: List<PathPoint>): EnemyData {
         if (!enemy.active) return enemy
 
-        // 1. Tick shield pulse cooldown
-        var shield = enemy.shield
-        var shieldCooldown = enemy.shieldCooldown
-        if (BossAbility.SHIELD_PULSE in enemy.bossAbilities) {
-            shieldCooldown -= dtSec
-            if (shieldCooldown <= 0f) {
-                shield = enemy.shieldMax
-                shieldCooldown = GameConstants.SHIELD_PULSE_COOLDOWN_SEC
-            }
-        }
-
-        // 2. Tick speed boost (Rally Cry)
-        var speedBoost = enemy.speedBoost
-        var speedBoostTimer = enemy.speedBoostTimer
-        if (speedBoostTimer > 0f) {
-            speedBoostTimer -= dtSec
-            if (speedBoostTimer <= 0f) {
-                speedBoostTimer = 0f
-                speedBoost = 0f
-            }
-        }
-
-        // 3. Handle slow timer
+        // 1. Handle slow timer
         var slowed = enemy.slowed
         var slowTimer = enemy.slowTimer
         if (slowed) {
@@ -87,17 +60,13 @@ object Enemy {
             }
         }
 
-        // 4. Calculate effective speed: base * (1 + boost) * slow
-        var speed = enemy.baseSpeed * (1f + speedBoost)
+        // 2. Calculate effective speed
+        var speed = enemy.baseSpeed
         if (slowed) speed *= enemy.slowMultiplier
 
-        // 5. Move along path
+        // 3. Move along path
         return moveAlongPath(
-            enemy.copy(
-                slowed = slowed, slowTimer = slowTimer, speed = speed,
-                shield = shield, shieldCooldown = shieldCooldown,
-                speedBoost = speedBoost, speedBoostTimer = speedBoostTimer
-            ),
+            enemy.copy(slowed = slowed, slowTimer = slowTimer, speed = speed),
             dtSec,
             path
         )
@@ -150,14 +119,6 @@ object Enemy {
             slowTimer = bestTimer,
             slowMultiplier = bestMult,
             speed = enemy.baseSpeed * bestMult
-        )
-    }
-
-    fun applyRallyCry(enemy: EnemyData): EnemyData {
-        if (!enemy.active) return enemy
-        return enemy.copy(
-            speedBoost = GameConstants.RALLY_CRY_SPEED_BOOST,
-            speedBoostTimer = GameConstants.RALLY_CRY_DURATION_SEC
         )
     }
 
